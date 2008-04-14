@@ -3,25 +3,10 @@
 
 #include "stdafx.h"
 #include "ChatClient.h"
-
-struct ConnectionSettings
-{
-	LPTSTR szHost;
-	DWORD dwPort;
-	LPTSTR szNick;
-	LPTSTR szUser;
-	LPTSTR szChannel;
-};
-
-#define ID_BUFFER	1
-#define ID_INPUT	2
-
-#define MAX_LOADSTRING 100
+#include "Net.h"
+#include "String.h"
 
 // Global Variables:
-
-// current instance
-HINSTANCE hInst;
 
 // The title bar text
 TCHAR szTitle[MAX_LOADSTRING];
@@ -32,28 +17,8 @@ TCHAR szWindowClass[MAX_LOADSTRING];
 // window handles for the buffer edit and the input edit
 HWND hwndBuffer, hwndInput;
 
-// the default window proc for the input edit, which has been subclassed
-// to capture enter strokes.
-WNDPROC OldInputProc;
-
-SOCKET sock;
-struct ConnectionSettings *conn;
-
-// Forward declarations of functions included in this code module:
-ATOM				MyRegisterClass(HINSTANCE hInstance);
-BOOL				InitInstance(HINSTANCE, int);
-LRESULT CALLBACK	WndProc(HWND, UINT, WPARAM, LPARAM);
-LRESULT CALLBACK	InputWndProc(HWND, UINT, WPARAM, LPARAM);
-INT_PTR CALLBACK	Connect(HWND, UINT, WPARAM, LPARAM);
-INT_PTR CALLBACK	About(HWND, UINT, WPARAM, LPARAM);
-
-VOID NetworkThread (PVOID pvoid);
-
-void AppendToBuffer(LPTSTR szData);
-int socket_read(SOCKET sock, char** ret);
-int socket_write(SOCKET sock, LPTSTR szData);
-int explode(char*** out, char* in, unsigned char delim);
-LPSTR wcToMb(LPWSTR szData);
+// current instance
+HINSTANCE hInst;
 
 int APIENTRY _tWinMain(HINSTANCE hInstance,
                      HINSTANCE hPrevInstance,
@@ -83,8 +48,6 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 		MessageBox(NULL, TEXT("Your system doesn't support the required Winsock Version!"), TEXT("Winsock Error!"), MB_ICONEXCLAMATION);
 		return 1; 
 	}
-
-	sock = NULL;
 
 	// Initialize global strings
 	LoadString(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
@@ -142,7 +105,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 	wcex.hInstance		= hInstance;
 	wcex.hIcon			= LoadIcon(hInstance, MAKEINTRESOURCE(IDI_CHATCLIENT));
 	wcex.hCursor		= LoadCursor(NULL, IDC_ARROW);
-	wcex.hbrBackground	= (HBRUSH)(COLOR_WINDOW+1);
+	wcex.hbrBackground	= (HBRUSH)(COLOR_WINDOW);
 	wcex.lpszMenuName	= MAKEINTRESOURCE(IDC_CHATCLIENT);
 	wcex.lpszClassName	= szWindowClass;
 	wcex.hIconSm		= LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
@@ -193,6 +156,9 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	int wmId, wmEvent;
+	HDC hdc;
+	WNDPROC inputProc, bufferProc;
+	HFONT font;
 
 	switch (message)
 	{
@@ -209,9 +175,19 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			0, 0, 0, 0, hWnd, (HMENU) ID_INPUT,
 			((LPCREATESTRUCT)lParam) -> hInstance, NULL) ;
 
-		SendMessage(hwndBuffer, (UINT)EM_SETREADONLY, TRUE, 0);
+		//SendMessage(hwndBuffer, (UINT)EM_SETREADONLY, TRUE, 0);
 
-		OldInputProc = (WNDPROC)SetWindowLong(hwndInput, GWL_WNDPROC, (LONG)InputWndProc);
+		bufferProc = (WNDPROC)SetWindowLong(hwndBuffer, GWL_WNDPROC, (LONG)BufferWndProc);
+		SetWindowLong(hwndBuffer, GWL_USERDATA, (LONG)bufferProc);
+
+		inputProc = (WNDPROC)SetWindowLong(hwndInput, GWL_WNDPROC, (LONG)InputWndProc);
+		SetWindowLong(hwndInput, GWL_USERDATA, (LONG)inputProc);
+
+		font = CreateFont(18, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+		ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY,
+		DEFAULT_PITCH, TEXT("Courier New"));
+
+		SendMessage(hwndBuffer, WM_SETFONT, (WPARAM)font, (LPARAM)FALSE);
 
 		break;
 
@@ -247,15 +223,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         // Make the edit control the size of the window's client area. 
 
         MoveWindow(hwndBuffer, 
-                   0, 0,                  // starting x- and y-coordinates 
-                   LOWORD(lParam),        // width of client area 
-                   HIWORD(lParam) - 20,        // height of client area 
+                   5, 5,                  // starting x- and y-coordinates 
+                   LOWORD(lParam) - 10,        // width of client area 
+                   HIWORD(lParam) - 35,        // height of client area 
                    TRUE);                 // repaint window 
 
         MoveWindow(hwndInput, 
-                   0, 
-				   HIWORD(lParam) - 20,        // starting x- and y-coordinates 
-                   LOWORD(lParam),        // width of client area 
+                   5, 
+				   HIWORD(lParam) - 25,        // starting x- and y-coordinates 
+                   LOWORD(lParam) - 10,        // width of client area 
                    20,        // height of client area 
                    TRUE);                 // repaint window 
         return 0; 
@@ -268,19 +244,34 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	return 0;
 }
 
+LRESULT CALLBACK BufferWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	WNDPROC bufferProc;
+
+	switch (message)
+	{
+	case WM_CHAR:
+		break;
+	default:
+		bufferProc = (WNDPROC)GetWindowLong(hWnd, GWL_USERDATA);
+		return CallWindowProc (bufferProc, hWnd, message, wParam, lParam) ;
+	}
+	return 0;
+}
+
 // Window proc for the input edit, subclassed to capture enter strokes.
 LRESULT CALLBACK InputWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	LPTSTR szBuffer;
-	TCHAR szSendBuffer[2048], szDisplayBuffer[2048];
 	int inputLen;
+	WNDPROC inputProc;
 
 	switch (message)
 	{
 	case WM_CHAR:
 		if (wParam == 0x0D)
 		{
-			if (sock == NULL) {
+			if (getConnectionSettings()->sock == NULL) {
 				AppendToBuffer(TEXT("Not connected."));
 				SendMessage(hWnd, WM_SETTEXT, 0, (LPARAM)NULL);
 				break;
@@ -290,20 +281,7 @@ LRESULT CALLBACK InputWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 			szBuffer = (LPTSTR)malloc(sizeof(TCHAR) * (inputLen + 1));
 			Edit_GetText(hWnd, (LPTSTR)szBuffer, inputLen);
 
-			if (*szBuffer == '/') {
-				
-			} else {
-				_stprintf_s(szSendBuffer, 
-					sizeof(szSendBuffer)/sizeof(TCHAR),
-					TEXT("PRIVMSG %s :%s"), conn->szChannel, szBuffer);
-
-				_stprintf_s(szDisplayBuffer, 
-					sizeof(szDisplayBuffer)/sizeof(TCHAR),
-					TEXT("<%s> %s"), conn->szNick, szBuffer);
-
-				AppendToBuffer(szDisplayBuffer);
-				socket_write(sock, szSendBuffer);
-			}
+			ParseCommand(szBuffer);
 
 			free(szBuffer);
 
@@ -314,234 +292,10 @@ LRESULT CALLBACK InputWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 		}
 
 	default:
-		return CallWindowProc (OldInputProc, hWnd, message, wParam, lParam) ;
+		inputProc = (WNDPROC)GetWindowLong(hWnd, GWL_USERDATA);
+		return CallWindowProc (inputProc, hWnd, message, wParam, lParam) ;
 	}
 	return 0;
-}
-
-// Message handler for connect box.
-INT_PTR CALLBACK Connect(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
-{
-	int wmEvent;
-	TCHAR szHost[200], szPort[200], szNick[200], szUser[200], szChannel[200], szInfo[1024];
-	HWND hHost, hPort, hNick, hUser, hChannel;
-
-	UNREFERENCED_PARAMETER(lParam);
-	switch (message)
-	{
-	case WM_INITDIALOG:
-		hHost = GetDlgItem(hDlg, IDC_HOST_EDIT);
-		hPort = GetDlgItem(hDlg, IDC_PORT_EDIT);
-		hNick = GetDlgItem(hDlg, IDC_NICK_EDIT);
-		hUser = GetDlgItem(hDlg, IDC_USER_EDIT);
-		hChannel = GetDlgItem(hDlg, IDC_CHANNEL_EDIT);
-
-		SendMessage(hHost, EM_SETLIMITTEXT, 30, 0);
-		SendMessage(hPort, EM_SETLIMITTEXT, 5, 0);
-		SendMessage(hNick, EM_SETLIMITTEXT, 30, 0);
-		SendMessage(hUser, EM_SETLIMITTEXT, 30, 0);
-		SendMessage(hChannel, EM_SETLIMITTEXT, 30, 0);
-
-		Edit_SetText(hHost, TEXT("beppe.c0la.se"));
-		Edit_SetText(hPort, TEXT("6667"));
-		Edit_SetText(hNick, TEXT("Aderyn2"));
-		Edit_SetText(hUser, TEXT("Emil"));
-		Edit_SetText(hChannel, TEXT("#floodffs!"));
-
-		return (INT_PTR)TRUE;
-
-	case WM_COMMAND:
-		wmEvent = LOWORD(wParam);
-		switch (wmEvent)
-		{
-		case IDOK:
-			hHost = GetDlgItem(hDlg, IDC_HOST_EDIT);
-			hPort = GetDlgItem(hDlg, IDC_PORT_EDIT);
-			hNick = GetDlgItem(hDlg, IDC_NICK_EDIT);
-			hUser = GetDlgItem(hDlg, IDC_USER_EDIT);
-			hChannel = GetDlgItem(hDlg, IDC_CHANNEL_EDIT);
-
-			Edit_GetText(hHost, (LPTSTR)szHost, sizeof(szHost)/sizeof(TCHAR));
-			Edit_GetText(hPort, (LPTSTR)szPort, sizeof(szPort)/sizeof(TCHAR));
-			Edit_GetText(hNick, (LPTSTR)szNick, sizeof(szNick)/sizeof(TCHAR));
-			Edit_GetText(hUser, (LPTSTR)szUser, sizeof(szUser)/sizeof(TCHAR));
-			Edit_GetText(hChannel, (LPTSTR)szChannel, sizeof(szChannel)/sizeof(TCHAR));
-
-			if (_tcslen(szHost) == 0) {
-				MessageBox(hDlg, TEXT("You have to specify a host!"), TEXT("Error!"), MB_ICONEXCLAMATION);
-				SetFocus(hHost);
-				return (INT_PTR)FALSE;
-			}
-
-			if (_tcslen(szPort) == 0) {
-				MessageBox(hDlg, TEXT("You have to specify a port!"), TEXT("Error!"), MB_ICONEXCLAMATION);
-				SetFocus(hPort);
-				return (INT_PTR)FALSE;
-			}
-
-			if (_tcslen(szNick) == 0) {
-				MessageBox(hDlg, TEXT("You have to specify a nick!"), TEXT("Error!"), MB_ICONEXCLAMATION);
-				SetFocus(hNick);
-				return (INT_PTR)FALSE;
-			}
-
-			if (_tcslen(szUser) == 0) {
-				MessageBox(hDlg, TEXT("You have to specify a user!"), TEXT("Error!"), MB_ICONEXCLAMATION);
-				SetFocus(hUser);
-				return (INT_PTR)FALSE;
-			}
-
-			if (_tcslen(szChannel) == 0) {
-				MessageBox(hDlg, TEXT("You have to specify a channel!"), TEXT("Error!"), MB_ICONEXCLAMATION);
-				SetFocus(hChannel);
-				return (INT_PTR)FALSE;
-			}
-
-			_stprintf_s(szInfo, sizeof(szInfo)/sizeof(TCHAR), 
-				TEXT("Connecting to %s:%s with nick \"%s\" and username \"%s\"."), 
-				szHost, szPort, szNick, szUser);
-			
-			conn = (struct ConnectionSettings*)malloc(sizeof(struct ConnectionSettings));
-			conn->szHost = _tcsdup(szHost);
-			conn->dwPort = _tstoi(szPort);
-			conn->szNick = _tcsdup(szNick);
-			conn->szUser = _tcsdup(szUser);
-			conn->szChannel = _tcsdup(szChannel);
-
-			//MessageBox(hDlg, szInfo, TEXT("Host"), 0);
-			AppendToBuffer(szInfo);
-
-			_beginthread (NetworkThread, 0, conn) ;
-
-			EndDialog(hDlg, LOWORD(wParam));
-			return (INT_PTR)TRUE;
-			break;
-
-		case IDCANCEL:
-			EndDialog(hDlg, LOWORD(wParam));
-			return (INT_PTR)TRUE;
-			break;
-		}
-		break;
-	}
-	return (INT_PTR)FALSE;
-}
-
-
-// Message handler for about box.
-INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
-{
-	UNREFERENCED_PARAMETER(lParam);
-	switch (message)
-	{
-	case WM_INITDIALOG:
-		return (INT_PTR)TRUE;
-
-	case WM_COMMAND:
-		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
-		{
-			EndDialog(hDlg, LOWORD(wParam));
-			return (INT_PTR)TRUE;
-		}
-		break;
-	}
-	return (INT_PTR)FALSE;
-}
-
-VOID NetworkThread (PVOID pvoid)
-{
-	struct ConnectionSettings *settings = (struct ConnectionSettings*)pvoid;
-
-	struct sockaddr_in ClientSAddr;
-	int ConVal;
-
-	char **split;
-	int arrSize, i;
-
-	CHAR buffer[1024], host[50], nick[50], user[50], channel[50];
-	PCHAR szRead;
-	TCHAR szResult[1024];
-	int iLen;
-
-	WideCharToMultiByte(CP_ACP, 0, settings->szHost, -1, host, sizeof(host), NULL, NULL);
-	WideCharToMultiByte(CP_ACP, 0, settings->szNick, -1, nick, sizeof(nick), NULL, NULL);
-	WideCharToMultiByte(CP_ACP, 0, settings->szUser, -1, user, sizeof(user), NULL, NULL);
-	WideCharToMultiByte(CP_ACP, 0, settings->szChannel, -1, channel, sizeof(channel), NULL, NULL);
-
-	sock = socket(AF_INET, SOCK_STREAM, 0);
-
-	// Do a dns lookup for the provided address.
-	struct addrinfo* info;
-	if (getaddrinfo(host, NULL, NULL, &info) != 0) {
-		AppendToBuffer(TEXT("Failed to resolve host!"));
-		return;
-	}
-
-	memset (&ClientSAddr, 0, sizeof(struct sockaddr));
-	ClientSAddr.sin_family = AF_INET;
-	ClientSAddr.sin_addr.s_addr = ((struct sockaddr_in*)info->ai_addr)->sin_addr.s_addr; //inet_addr(host);
-	ClientSAddr.sin_port = htons((u_short)settings->dwPort);
-
-	ConVal = connect(sock, (struct sockaddr*)&ClientSAddr, sizeof(struct sockaddr));
-
-	//send(sock, "",
-	sprintf_s(buffer, sizeof(buffer), "NICK %s\r\n", nick);
-	send(sock, buffer, strlen(buffer), 0);
-
-	sprintf_s(buffer, sizeof(buffer), "USER %s %s %s %s\r\n", user, user, user, user);
-	send(sock, buffer, strlen(buffer), 0);
-
-	sprintf_s(buffer, sizeof(buffer), "JOIN %s\r\n", channel);
-	send(sock, buffer, strlen(buffer), 0);
-
-	while (TRUE)
-	{
-		iLen = socket_read(sock, &szRead);
-
-		arrSize = explode(&split, szRead, ' ');
-		if (arrSize > 1) {
-
-			if (strncmp(split[1], "PRIVMSG", 7) == 0) {
-				char *msg = szRead + strlen(split[0]) + strlen(split[1]) + strlen(split[2]) + 4;
-				char *tmp = strchr(split[0], '!');
-				*tmp = '\0';
-				sprintf(buffer, "<%s> %s", split[0] + 1, msg);
-				MultiByteToWideChar(CP_ACP, 0, buffer, strlen(buffer)+1, szResult, sizeof(szResult)/sizeof(TCHAR));
-				AppendToBuffer(szResult);
-			} 
-			else if (strncmp(split[0], "PING", 4) == 0) {
-				sprintf_s(buffer, sizeof(buffer), "PONG %s\r\n", split[1]);
-				send(sock, buffer, strlen(buffer), 0);
-			}
-			else if (strncmp(split[1], "451", 3) == 0 && strncmp(split[2], "JOIN", 0) == 0) {
-				sprintf_s(buffer, sizeof(buffer), "JOIN %s\r\n", channel);
-				send(sock, buffer, strlen(buffer), 0);
-			}
-			else {
-				MultiByteToWideChar(CP_ACP, 0, szRead, iLen, szResult, sizeof(szResult)/sizeof(TCHAR));
-				AppendToBuffer(szResult);
-			}
-			//MultiByteToWideChar(CP_ACP, 0, split[1], strlen(split[1])+1, szResult, sizeof(szResult)/sizeof(TCHAR));
-			//AppendToBuffer(szResult);
-			//MessageBox(NULL, szResult, TEXT("foo"), 0);
-		}
-		else {
-			MultiByteToWideChar(CP_ACP, 0, szRead, iLen, szResult, sizeof(szResult)/sizeof(TCHAR));
-			AppendToBuffer(szResult);
-		}
-
-		if (arrSize > 0) {
-			for (i = 0; i < arrSize; i++) {
-				free(split[i]);
-			}
-			free(split);
-		}
-		//Sleep(100);
-	}
-
-    shutdown(sock, SD_BOTH);
-	closesocket(sock);
-
 }
 
 // Utility method to append data to the end of the buffer edit.
@@ -561,109 +315,25 @@ void AppendToBuffer(LPTSTR szData)
 	SendMessage(hwndBuffer, EM_REPLACESEL, 0, (LPARAM)szNewLine);
 }
 
-int socket_write(SOCKET sock, LPTSTR szData)
+void ParseCommand(LPTSTR szBuffer)
 {
-	int sent;
-	LPCSTR szBuffer = wcToMb(szData);
+	struct ConnectionSettings *settings;
+	TCHAR szSendBuffer[2048], szDisplayBuffer[2048];
 
-	sent = send(sock, szBuffer, strlen(szBuffer), 0);
-	send(sock, "\r\n", 2, 0);
+	settings = getConnectionSettings();
 
-	free((VOID*)szBuffer);
+	if (*szBuffer == '/') {
+		
+	} else {
+		_stprintf_s(szSendBuffer, 
+			sizeof(szSendBuffer)/sizeof(TCHAR),
+			TEXT("PRIVMSG %s :%s"), settings->szChannel, szBuffer);
 
-	return sent;
-}
+		_stprintf_s(szDisplayBuffer, 
+			sizeof(szDisplayBuffer)/sizeof(TCHAR),
+			TEXT("<%s> %s"), settings->szNick, szBuffer);
 
-int socket_read(SOCKET sock, char** ret)
-{
-    char byte = 0, lastbyte = 0;
-    int buf_size = (32 * sizeof(char)), r = 0, totalread = 0;
-
-    char* buf = (char*)malloc(buf_size);
-
-    memset(buf,0,buf_size);
-
-    while (1) {
-
-        if (totalread + sizeof(char) >= buf_size) {
-            buf_size *= 2;
-            buf = (char*)realloc(buf, buf_size);
-        }
-
-        r = recv(sock, &byte, sizeof(char), 0);
-
-        if (r == 0 || r == -1) {
-            break;
-        }
-
-        if (byte == 10 && lastbyte == 13) {
-            buf[totalread-1] = 0;
-            break;
-        } else {
-            buf[totalread] = byte;
-        }
-
-        totalread += r;
-        lastbyte = byte;
-
-    }
-
-    *ret = buf;
-    return totalread;
-}
-
-int explode(char*** out, char* in, unsigned char delim)
-{
-	int i, j, len, subLen, arraySize, last;
-	char **arr, *subStr;
-
-	len = strlen(in);
-	if (len < 0) {
-		return -1;
+		AppendToBuffer(szDisplayBuffer);
+		SocketWrite(szSendBuffer);
 	}
-
-	arraySize = 0;
-	for (i = 0; i < len; i++) {
-		if (in[i] == delim) {
-			arraySize++;
-		}
-	}
-
-	if (arraySize == 0) {
-		return -1;
-	}
-
-	arr = (char**)malloc(sizeof(char*) * (arraySize + 1));
-	last = 0;
-	j = 0;
-	for (i = 0; i <= len; i++) {
-		if (in[i] == delim || in[i] == '\0') {
-			subLen = i - last;
-			subStr = (char*)malloc(sizeof(char) * (subLen + 1));
-			strncpy(subStr, in + last, subLen);
-			subStr[subLen] = '\0';
-			arr[j] = subStr;
-			j++;
-			last = i + 1;
-		}
-	}
-
-	*out = arr;
-
-	return j;
-}
-
-LPSTR wcToMb(LPWSTR szData)
-{
-	int wLen, mbLen;
-	LPSTR szBuffer;
-
-	wLen = _tcslen(szData);
-	mbLen = WideCharToMultiByte(CP_ACP, 0, szData, -1, NULL, 0, NULL, NULL);
-
-	szBuffer = (PCHAR)malloc(mbLen+1);
-	WideCharToMultiByte(CP_ACP, 0, szData, wLen, szBuffer, mbLen, NULL, NULL);
-	szBuffer[mbLen-1] = '\0';
-
-	return szBuffer;
 }

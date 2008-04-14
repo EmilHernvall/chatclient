@@ -173,7 +173,19 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
+				RelativePath=".\AboutDialog.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\ChatClient.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\ConnectDialog.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\Net.cpp"
 				>
 			</File>
 			<File
@@ -196,6 +208,10 @@
 					/>
 				</FileConfiguration>
 			</File>
+			<File
+				RelativePath=".\String.cpp"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -207,11 +223,19 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Net.h"
+				>
+			</File>
+			<File
 				RelativePath=".\Resource.h"
 				>
 			</File>
 			<File
 				RelativePath=".\stdafx.h"
+				>
+			</File>
+			<File
+				RelativePath=".\String.h"
 				>
 			</File>
 			<File
