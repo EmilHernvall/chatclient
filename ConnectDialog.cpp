@@ -1,14 +1,27 @@
 #include "stdafx.h"
+#include "ConnectDialog.h"
 #include "ChatClient.h"
 #include "Net.h"
+#include "IRC.h"
+
+VOID NetworkThread(PVOID pvoid);
+
+ConnectDialog::ConnectDialog(HINSTANCE hInst, INT nResource, HWND hwndParent, ChatClient *bwChatClient)
+: Dialog(hInst, nResource, hwndParent)
+{
+	m_bwChatClient = bwChatClient;
+	m_net = bwChatClient->GetNet();
+	m_irc = bwChatClient->GetIRC();
+}
 
 // Message handler for connect box.
-INT_PTR CALLBACK Connect(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+INT_PTR CALLBACK ConnectDialog::HandleMessage(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	int wmEvent;
 	TCHAR szHost[200], szPort[200], szNick[200], szUser[200], szChannel[200], szInfo[1024];
+	LPTSTR szConnectHost, szConnectNick, szConnectUser, szConnectChannel;
+	WORD wConnectPort;
 	HWND hHost, hPort, hNick, hUser, hChannel;
-	struct ConnectionSettings *conn;
 
 	UNREFERENCED_PARAMETER(lParam);
 	switch (message)
@@ -85,17 +98,20 @@ INT_PTR CALLBACK Connect(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 				TEXT("Connecting to %s:%s with nick \"%s\" and username \"%s\"."), 
 				szHost, szPort, szNick, szUser);
 			
-			conn = (struct ConnectionSettings*)malloc(sizeof(struct ConnectionSettings));
-			conn->szHost = _tcsdup(szHost);
-			conn->dwPort = _tstoi(szPort);
-			conn->szNick = _tcsdup(szNick);
-			conn->szUser = _tcsdup(szUser);
-			conn->szChannel = _tcsdup(szChannel);
+			szConnectHost = _tcsdup(szHost);
+			wConnectPort = _tstoi(szPort);
+			szConnectNick = _tcsdup(szNick);
+			szConnectUser = _tcsdup(szUser);
+			szConnectChannel = _tcsdup(szChannel);
 
-			//MessageBox(hDlg, szInfo, TEXT("Host"), 0);
-			AppendToBuffer(szInfo);
+			m_bwChatClient->AppendToBuffer(szInfo);
 
-			_beginthread (NetworkThread, 0, conn) ;
+			m_net->Connect(szConnectHost, wConnectPort);
+			m_irc->SetNick(szConnectNick);
+			m_irc->SetUser(szConnectUser);
+			m_irc->SetChannel(szConnectChannel);
+
+			_beginthread (NetworkThread, 0, m_bwChatClient);
 
 			EndDialog(hDlg, LOWORD(wParam));
 			return (INT_PTR)TRUE;

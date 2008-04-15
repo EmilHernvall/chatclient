@@ -1,8 +1,15 @@
 #include "stdafx.h"
-#include "ChatClient.h"
+#include "Dialog.h"
+#include "AboutDialog.h"
+
+AboutDialog::AboutDialog(HINSTANCE hInst, INT nResource, HWND hwndParent)
+: Dialog(hInst, nResource, hwndParent)
+{
+
+}
 
 // Message handler for about box.
-INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+INT_PTR CALLBACK AboutDialog::HandleMessage(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	UNREFERENCED_PARAMETER(lParam);
 	switch (message)

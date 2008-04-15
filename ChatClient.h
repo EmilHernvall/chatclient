@@ -10,15 +10,29 @@
 
 #define MAX_LOADSTRING 100
 
-// Forward declarations of functions included in this code module:
-ATOM				MyRegisterClass(HINSTANCE hInstance);
-BOOL				InitInstance(HINSTANCE, int);
-LRESULT CALLBACK	WndProc(HWND, UINT, WPARAM, LPARAM);
-LRESULT CALLBACK	InputWndProc(HWND, UINT, WPARAM, LPARAM);
-LRESULT CALLBACK	BufferWndProc(HWND, UINT, WPARAM, LPARAM);
-INT_PTR CALLBACK	Connect(HWND, UINT, WPARAM, LPARAM);
-INT_PTR CALLBACK	About(HWND, UINT, WPARAM, LPARAM);
+#include "BasicWindow.h"
 
-void AppendToBuffer(LPTSTR szData);
-void ParseCommand(LPTSTR szCommand);
+class AboutDialog;
+class ConnectDialog;
+class Net;
+class IRC;
 
+class ChatClient : public BasicWindow
+{
+public:
+	ChatClient(HINSTANCE hInst, INT nCmdShow, LPCWSTR szWindowClass, LPCWSTR szWindowTitle);
+	LRESULT CALLBACK HandleMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+
+	void AppendToBuffer(LPTSTR szData);
+	void ParseCommand(LPTSTR szCommand);
+
+	Net *GetNet() { return m_net; }
+	IRC *GetIRC() { return m_irc; }
+
+private:
+	HWND m_hwndBuffer, m_hwndInput;
+	Net *m_net;
+	IRC *m_irc;
+	AboutDialog *m_about;
+	ConnectDialog *m_connect;
+};

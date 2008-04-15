@@ -177,6 +177,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Application.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\BasicWindow.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\ChatClient.cpp"
 				>
 			</File>
@@ -185,7 +193,19 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Dialog.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\IRC.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\Net.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\NetThread.cpp"
 				>
 			</File>
 			<File
@@ -219,7 +239,31 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
+				RelativePath=".\AboutDialog.h"
+				>
+			</File>
+			<File
+				RelativePath=".\Application.h"
+				>
+			</File>
+			<File
+				RelativePath=".\BasicWindow.h"
+				>
+			</File>
+			<File
 				RelativePath=".\ChatClient.h"
+				>
+			</File>
+			<File
+				RelativePath=".\ConnectDialog.h"
+				>
+			</File>
+			<File
+				RelativePath=".\Dialog.h"
+				>
+			</File>
+			<File
+				RelativePath=".\IRC.h"
 				>
 			</File>
 			<File

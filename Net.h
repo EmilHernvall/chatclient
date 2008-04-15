@@ -1,21 +1,33 @@
 
 #pragma once
 
-struct ConnectionSettings
+class ChatClient;
+
+class Net 
 {
-	SOCKET sock;
-	LPTSTR szHost;
-	DWORD dwPort;
-	LPTSTR szNick;
-	LPTSTR szUser;
-	LPTSTR szChannel;
+public:
+	static BOOL Initialize();
+	static VOID CleanUp();
+
+	Net();
+
+	BOOL Connect(LPTSTR szHost, WORD wPort);
+	VOID Disconnect();
+
+	BOOL IsConnected() {
+		return m_bConnected; 
+	}
+	LPTSTR GetHost() { return m_szHost; }
+	WORD GetPort() { return m_wPort; }
+
+	INT Write(LPTSTR szData);
+	INT Read(LPTSTR* ret);
+
+private:
+	BOOL m_bConnected;
+
+	SOCKET m_sock;
+	LPTSTR m_szHost;
+	WORD m_wPort;
 };
 
-VOID NetworkThread (PVOID pvoid);
-
-int SocketRead(CHAR** ret);
-int SocketWrite(LPTSTR szData);
-
-struct ConnectionSettings *getConnectionSettings();
-
-VOID ProcessCommand(LPSTR szData, INT iLen, LPSTR szChannel);

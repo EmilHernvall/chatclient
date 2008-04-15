@@ -34,13 +34,13 @@ void ErrorExit(LPTSTR lpszFunction)
     ExitProcess(dw); 
 }
 
-int explode(char*** out, char* in, unsigned char delim)
+INT Explode(LPWSTR** out, LPWSTR in, WCHAR delim)
 {
-	int i, j, len, subLen, arraySize, last;
-	char **arr, *subStr;
+	INT i, j, len, subLen, arraySize, last;
+	LPWSTR *arr, subStr;
 
-	len = strlen(in);
-	if (len < 0) {
+	len = wcslen(in);
+	if (len <= 0) {
 		return -1;
 	}
 
@@ -55,14 +55,14 @@ int explode(char*** out, char* in, unsigned char delim)
 		return -1;
 	}
 
-	arr = (char**)malloc(sizeof(char*) * (arraySize + 1));
+	arr = (LPWSTR*)malloc(sizeof(WCHAR*) * (arraySize + 1));
 	last = 0;
 	j = 0;
 	for (i = 0; i <= len; i++) {
-		if (in[i] == delim || in[i] == '\0') {
+		if (in[i] == delim || in[i] == (WCHAR)'\0') {
 			subLen = i - last;
-			subStr = (char*)malloc(sizeof(char) * (subLen + 1));
-			strncpy(subStr, in + last, subLen);
+			subStr = (LPWSTR)malloc(sizeof(WCHAR) * (subLen + 1));
+			wcsncpy(subStr, in + last, subLen);
 			subStr[subLen] = '\0';
 			arr[j] = subStr;
 			j++;
@@ -77,7 +77,7 @@ int explode(char*** out, char* in, unsigned char delim)
 
 LPSTR wcToMb(LPWSTR szData)
 {
-	int wLen, mbLen;
+	INT wLen, mbLen;
 	LPSTR szBuffer;
 
 	wLen = _tcslen(szData);
@@ -90,11 +90,11 @@ LPSTR wcToMb(LPWSTR szData)
 	return szBuffer;
 }
 
-BOOL is_numeric(PCHAR szStr)
+BOOL IsNumeric(LPTSTR szStr)
 {
-    PCHAR szStr2;
-    for (szStr2 = szStr; szStr2 != szStr + strlen(szStr); szStr2++) {
-        if (!isdigit(*szStr2)) {
+    LPTSTR szStr2;
+    for (szStr2 = szStr; szStr2 != szStr + wcslen(szStr); szStr2++) {
+        if (!iswdigit(*szStr2)) {
             return FALSE;
         }
     }
