@@ -5,6 +5,9 @@
 #define ID_BUFFER	1
 #define ID_INPUT	2
 
+#define ID_CHANNELS	50
+#define ID_CHANNEL_STATUS	(ID_CHANNELS+0)
+
 #define MAX_LOADSTRING 100
 
 // Forward declarations of functions included in this code module:

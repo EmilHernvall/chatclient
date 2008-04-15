@@ -6,6 +6,12 @@
 #include "Net.h"
 #include "String.h"
 
+struct Channel {
+	INT id;
+	HWND hwndButton;
+	LPTSTR szName;
+};
+
 // Global Variables:
 
 // The title bar text
@@ -16,6 +22,10 @@ TCHAR szWindowClass[MAX_LOADSTRING];
 
 // window handles for the buffer edit and the input edit
 HWND hwndBuffer, hwndInput;
+
+struct Channel channels[] = { { ID_CHANNEL_STATUS, NULL, TEXT("Status") },
+                              { ID_CHANNELS+1, NULL, TEXT("#c0la") },
+                              { ID_CHANNELS+2, NULL, TEXT("#floodffs!") } };
 
 // current instance
 HINSTANCE hInst;
@@ -155,7 +165,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 //
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	int wmId, wmEvent;
+	int wmId, wmEvent, i;
 	HDC hdc;
 	WNDPROC inputProc, bufferProc;
 	HFONT font;
@@ -185,9 +195,19 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 		font = CreateFont(18, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
 		ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY,
-		DEFAULT_PITCH, TEXT("Courier New"));
+		DEFAULT_PITCH, TEXT("Fixedsys"));
 
 		SendMessage(hwndBuffer, WM_SETFONT, (WPARAM)font, (LPARAM)FALSE);
+		SendMessage(hwndInput, WM_SETFONT, (WPARAM)font, (LPARAM)FALSE);
+
+		for (i = 0; i < sizeof(channels) / sizeof(struct Channel); i++)
+		{
+			channels[i].hwndButton = CreateWindow(TEXT ("button"), NULL, 
+				WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT,
+				0, 0, 0, 0, hWnd, (HMENU) channels[i].id,
+				((LPCREATESTRUCT)lParam) -> hInstance, NULL);
+			SendMessage(channels[i].hwndButton, WM_SETTEXT, 0, (LPARAM)channels[i].szName);
+		}
 
 		break;
 
@@ -222,22 +242,31 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_SIZE: 
         // Make the edit control the size of the window's client area. 
 
-        MoveWindow(hwndBuffer, 
-                   5, 5,                  // starting x- and y-coordinates 
-                   LOWORD(lParam) - 10,        // width of client area 
-                   HIWORD(lParam) - 35,        // height of client area 
-                   TRUE);                 // repaint window 
+		for (i = 0; i < sizeof(channels) / sizeof(struct Channel); i++)
+		{
+			MoveWindow(channels[i].hwndButton, 
+				5, 5 * (i+1) + 30 * i, 
+				100, 30, 
+				TRUE);
+		}
 
-        MoveWindow(hwndInput, 
-                   5, 
-				   HIWORD(lParam) - 25,        // starting x- and y-coordinates 
-                   LOWORD(lParam) - 10,        // width of client area 
-                   20,        // height of client area 
-                   TRUE);                 // repaint window 
+        MoveWindow(hwndBuffer, 110, 5, LOWORD(lParam) - 115, 
+			HIWORD(lParam) - 35, TRUE);
+
+        MoveWindow(hwndInput, 5, HIWORD(lParam) - 25, 
+			LOWORD(lParam) - 10, 20, TRUE);
         return 0; 
 	case WM_DESTROY:
 		PostQuitMessage(0);
 		break;
+    case WM_CTLCOLOREDIT:
+		//SendMessage(hWnd, WM_ERASEBKGND, wParam, 0);
+        //SetBkMode((HDC)wParam, TRANSPARENT);
+		SetBkColor((HDC)wParam, 0x000000);
+        SetTextColor((HDC)wParam, RGB(0, 255, 0));
+        return (LRESULT)GetStockObject(BLACK_BRUSH);
+	/*case WM_ERASEBKGND:
+		return 1;*/
 	default:
 		return DefWindowProc(hWnd, message, wParam, lParam);
 	}
@@ -246,12 +275,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 LRESULT CALLBACK BufferWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	WNDPROC bufferProc;
+	WNDPROC bufferProc;	
+	HANDLE hBg;
+	RECT rcArea;
+	HDC hdc, hdcSource;
+	BITMAP bmp;
+	LOGBRUSH brush;
 
 	switch (message)
 	{
 	case WM_CHAR:
 		break;
+
 	default:
 		bufferProc = (WNDPROC)GetWindowLong(hWnd, GWL_USERDATA);
 		return CallWindowProc (bufferProc, hWnd, message, wParam, lParam) ;
@@ -265,13 +300,18 @@ LRESULT CALLBACK InputWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 	LPTSTR szBuffer;
 	int inputLen;
 	WNDPROC inputProc;
+	HANDLE hBg;
+	RECT rcArea;
+	HDC hdc, hdcSource;
+	BITMAP bmp;
+	LOGBRUSH brush;
 
 	switch (message)
 	{
 	case WM_CHAR:
 		if (wParam == 0x0D)
 		{
-			if (getConnectionSettings()->sock == NULL) {
+			if (getConnectionSettings() == NULL) {
 				AppendToBuffer(TEXT("Not connected."));
 				SendMessage(hWnd, WM_SETTEXT, 0, (LPARAM)NULL);
 				break;
@@ -290,7 +330,6 @@ LRESULT CALLBACK InputWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 			//MessageBox(NULL, (LPTSTR)szBuffer, TEXT("hwndInput"), 0);
 			break;
 		}
-
 	default:
 		inputProc = (WNDPROC)GetWindowLong(hWnd, GWL_USERDATA);
 		return CallWindowProc (inputProc, hWnd, message, wParam, lParam) ;

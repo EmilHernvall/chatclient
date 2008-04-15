@@ -1,55 +1,21 @@
-========================================================================
-    WIN32 APPLICATION : ChatClient Project Overview
-========================================================================
+	/*case WM_ERASEBKGND:
+		hdc = (HDC)wParam;
+		GetClientRect(hWnd, &rcArea);
 
-AppWizard has created this ChatClient application for you.
+		hBg = LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP1), IMAGE_BITMAP, 0, 0, 0);
+		if (hBg == NULL) {
+			ErrorExit(TEXT("LoadImage"));
+		}
 
-This file contains a summary of what you will find in each of the files that
-make up your ChatClient application.
+		hdcSource = CreateCompatibleDC(hdc);
+		SelectObject(hdcSource, hBg);
 
+		GetObject(hBg, sizeof(BITMAP), &bmp);
+		StretchBlt(hdc, rcArea.left, rcArea.top, rcArea.right - rcArea.left, rcArea.bottom - rcArea.top, 
+			hdcSource, 0, 0, bmp.bmWidth, bmp.bmHeight, MERGECOPY);
 
-ChatClient.vcproj
-    This is the main project file for VC++ projects generated using an Application Wizard.
-    It contains information about the version of Visual C++ that generated the file, and
-    information about the platforms, configurations, and project features selected with the
-    Application Wizard.
-
-ChatClient.cpp
-    This is the main application source file.
-
-/////////////////////////////////////////////////////////////////////////////
-AppWizard has created the following resources:
-
-ChatClient.rc
-    This is a listing of all of the Microsoft Windows resources that the
-    program uses.  It includes the icons, bitmaps, and cursors that are stored
-    in the RES subdirectory.  This file can be directly edited in Microsoft
-    Visual C++.
-
-Resource.h
-    This is the standard header file, which defines new resource IDs.
-    Microsoft Visual C++ reads and updates this file.
-
-ChatClient.ico
-    This is an icon file, which is used as the application's icon (32x32).
-    This icon is included by the main resource file ChatClient.rc.
-
-small.ico
-    This is an icon file, which contains a smaller version (16x16)
-    of the application's icon. This icon is included by the main resource
-    file ChatClient.rc.
-
-/////////////////////////////////////////////////////////////////////////////
-Other standard files:
-
-StdAfx.h, StdAfx.cpp
-    These files are used to build a precompiled header (PCH) file
-    named ChatClient.pch and a precompiled types file named StdAfx.obj.
-
-/////////////////////////////////////////////////////////////////////////////
-Other notes:
-
-AppWizard uses "TODO:" comments to indicate parts of the source code you
-should add to or customize.
-
-/////////////////////////////////////////////////////////////////////////////
+		brush.lbColor = RGB(255, 0, 0);
+		brush.lbHatch = 0;
+		brush.lbStyle = BS_SOLID;
+		FillRect(hdc, &rcArea, CreateBrushIndirect(&brush));
+		return 1;*/

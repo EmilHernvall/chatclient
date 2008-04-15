@@ -13,6 +13,7 @@
 #define IDI_SMALL                       108
 #define IDC_CHATCLIENT                  109
 #define IDR_MAINFRAME                   128
+#define IDB_BITMAP1                     132
 #define IDC_HOST_LABEL                  1000
 #define IDC_HOST_EDIT                   1001
 #define IDC_PORT_LABEL                  1002
@@ -21,7 +22,6 @@
 #define IDC_NICK_EDIT                   1009
 #define IDC_USER_LABEL                  1010
 #define IDC_USER_EDIT                   1011
-#define IDC_CHANNEL_LABWEL              1012
 #define IDC_CHANNEL_LABEL               1012
 #define IDC_CHANNEL_EDIT                1013
 #define ID_FILE_CONNECT                 32771
@@ -33,7 +33,7 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
-#define _APS_NEXT_RESOURCE_VALUE        130
+#define _APS_NEXT_RESOURCE_VALUE        133
 #define _APS_NEXT_COMMAND_VALUE         32773
 #define _APS_NEXT_CONTROL_VALUE         1002
 #define _APS_NEXT_SYMED_VALUE           110
