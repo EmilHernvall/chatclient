@@ -177,23 +177,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\Application.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\BasicWindow.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\ChatClient.cpp"
 				>
 			</File>
 			<File
 				RelativePath=".\ConnectDialog.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\Dialog.cpp"
 				>
 			</File>
 			<File
@@ -243,23 +231,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\Application.h"
-				>
-			</File>
-			<File
-				RelativePath=".\BasicWindow.h"
-				>
-			</File>
-			<File
 				RelativePath=".\ChatClient.h"
 				>
 			</File>
 			<File
 				RelativePath=".\ConnectDialog.h"
-				>
-			</File>
-			<File
-				RelativePath=".\Dialog.h"
 				>
 			</File>
 			<File
@@ -293,10 +269,6 @@
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
 			>
 			<File
-				RelativePath=".\bitmap1.bmp"
-				>
-			</File>
-			<File
 				RelativePath=".\ChatClient.ico"
 				>
 			</File>
@@ -305,11 +277,43 @@
 				>
 			</File>
 			<File
-				RelativePath="C:\WINDOWS\Fisketur.bmp"
+				RelativePath=".\small.ico"
+				>
+			</File>
+		</Filter>
+		<Filter
+			Name="Framework"
+			>
+			<File
+				RelativePath=".\Application.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\small.ico"
+				RelativePath=".\Application.h"
+				>
+			</File>
+			<File
+				RelativePath=".\BasicWindow.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\BasicWindow.h"
+				>
+			</File>
+			<File
+				RelativePath=".\Dialog.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\Dialog.h"
+				>
+			</File>
+			<File
+				RelativePath=".\SubclassedWindow.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\SubclassedWindow.h"
 				>
 			</File>
 		</Filter>

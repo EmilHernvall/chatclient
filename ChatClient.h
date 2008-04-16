@@ -11,11 +11,14 @@
 #define MAX_LOADSTRING 100
 
 #include "BasicWindow.h"
+#include "SubclassedWindow.h"
 
 class AboutDialog;
 class ConnectDialog;
 class Net;
 class IRC;
+class BufferEdit;
+class InputEdit;
 
 class ChatClient : public BasicWindow
 {
@@ -30,9 +33,26 @@ public:
 	IRC *GetIRC() { return m_irc; }
 
 private:
-	HWND m_hwndBuffer, m_hwndInput;
+	BufferEdit *m_bufferEdit;
+	InputEdit *m_inputEdit;
 	Net *m_net;
 	IRC *m_irc;
 	AboutDialog *m_about;
 	ConnectDialog *m_connect;
+};
+
+class BufferEdit : public SubclassedWindow
+{
+public:
+	BufferEdit(HWND hwndParent, HINSTANCE hInstance);
+	LRESULT CALLBACK HandleMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+};
+
+class InputEdit : public SubclassedWindow
+{
+public:
+	InputEdit(HWND hwndParent, HINSTANCE hInstance, ChatClient *bwChatClient);
+	LRESULT CALLBACK HandleMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+private:
+	ChatClient *m_bwChatClient;
 };

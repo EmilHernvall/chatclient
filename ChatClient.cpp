@@ -17,10 +17,6 @@ struct Channel channels[] = { { ID_CHANNEL_STATUS, NULL, TEXT("Status") },
                               { ID_CHANNELS+1, NULL, TEXT("#c0la") },
                               { ID_CHANNELS+2, NULL, TEXT("#floodffs!") } };*/
 
-// Forward declarations of functions included in this code module:
-LRESULT CALLBACK	InputWndProc(HWND, UINT, WPARAM, LPARAM);
-LRESULT CALLBACK	BufferWndProc(HWND, UINT, WPARAM, LPARAM);
-
 int APIENTRY _tWinMain(HINSTANCE hInstance,
                      HINSTANCE hPrevInstance,
                      LPTSTR    lpCmdLine,
@@ -36,24 +32,19 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	// Accelerators
 	HACCEL hAccelTable;
 
-	// Application
-	Application *appThisApp;
-
-	// Main window
-	ChatClient *bwThisWindow;
-
-	Net::Initialize();
-
 	// Initialize strings
 	LoadString(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
 	LoadString(hInstance, IDC_CHATCLIENT, szWindowClass, MAX_LOADSTRING);
 
 	hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_CHATCLIENT));
 
-	bwThisWindow = new ChatClient(hInstance, nCmdShow, szWindowClass, szTitle);
+	Net::Initialize();
 
-	appThisApp = new Application();
-	appThisApp->Run(bwThisWindow);
+	// Application
+	Application appThisApp;
+	ChatClient bwThisWindow(hInstance, nCmdShow, szWindowClass, szTitle);
+
+	appThisApp.Run(&bwThisWindow);
 
 	Net::CleanUp();
 
@@ -70,7 +61,6 @@ ChatClient::ChatClient(HINSTANCE hInst, INT nCmdShow, LPCWSTR szWindowClass, LPC
 LRESULT CALLBACK ChatClient::HandleMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	int wmId, wmEvent, i;
-	WNDPROC inputProc, bufferProc;
 	HFONT font;
 
 	switch (message)
@@ -80,33 +70,15 @@ LRESULT CALLBACK ChatClient::HandleMessage(HWND hWnd, UINT message, WPARAM wPara
 		m_about = new AboutDialog(m_hInst, IDD_ABOUTBOX, hWnd);
 		m_connect = new ConnectDialog(m_hInst, IDC_CONNECT_DIALOG, hWnd, this);
 
-		m_hwndBuffer = CreateWindow(TEXT ("edit"), NULL, 
-			WS_CHILD | WS_VISIBLE | WS_VSCROLL | 
-			WS_BORDER | ES_LEFT | ES_MULTILINE |
-			ES_AUTOVSCROLL,
-			0, 0, 0, 0, hWnd, (HMENU) ID_BUFFER,
-			m_hInst, NULL) ;
-
-		m_hwndInput = CreateWindow(TEXT ("edit"), NULL, 
-			WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT,
-			0, 0, 0, 0, hWnd, (HMENU) ID_INPUT,
-			m_hInst, NULL) ;
-		SetWindowLong(m_hwndInput, GWL_USERDATA, (LONG)this);
-
-		//SendMessage(m_hwndBuffer, (UINT)EM_SETREADONLY, TRUE, 0);
-
-		bufferProc = (WNDPROC)SetWindowLong(m_hwndBuffer, GWL_WNDPROC, (LONG)BufferWndProc);
-		SetWindowLong(m_hwndBuffer, GWL_USERDATA, (LONG)bufferProc);
-
-		inputProc = (WNDPROC)SetWindowLong(m_hwndInput, GWL_WNDPROC, (LONG)InputWndProc);
-		SetWindowLong(m_hwndInput, GWL_USERDATA, (LONG)inputProc);
+		m_bufferEdit = new BufferEdit(m_hWnd, m_hInst);
+		m_inputEdit = new InputEdit(m_hWnd, m_hInst, this);
 
 		font = CreateFont(18, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
 		ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY,
 		DEFAULT_PITCH, TEXT("Fixedsys"));
 
-		SendMessage(m_hwndBuffer, WM_SETFONT, (WPARAM)font, (LPARAM)FALSE);
-		SendMessage(m_hwndInput, WM_SETFONT, (WPARAM)font, (LPARAM)FALSE);
+		SendMessage(m_bufferEdit->GetHwnd(), WM_SETFONT, (WPARAM)font, (LPARAM)FALSE);
+		SendMessage(m_inputEdit->GetHwnd(), WM_SETFONT, (WPARAM)font, (LPARAM)FALSE);
 
 		/*for (i = 0; i < sizeof(channels) / sizeof(struct Channel); i++)
 		{
@@ -120,7 +92,7 @@ LRESULT CALLBACK ChatClient::HandleMessage(HWND hWnd, UINT message, WPARAM wPara
 		break;
 
 	case WM_SETFOCUS:
-		SetFocus(m_hwndInput);
+		SetFocus(m_inputEdit->GetHwnd());
 		break;
 
 	case WM_COMMAND:
@@ -151,10 +123,10 @@ LRESULT CALLBACK ChatClient::HandleMessage(HWND hWnd, UINT message, WPARAM wPara
 				TRUE);
 		}*/
 
-        MoveWindow(m_hwndBuffer, 110, 5, LOWORD(lParam) - 115, 
+		MoveWindow(m_bufferEdit->GetHwnd(), 110, 5, LOWORD(lParam) - 115, 
 			HIWORD(lParam) - 35, TRUE);
 
-        MoveWindow(m_hwndInput, 5, HIWORD(lParam) - 25, 
+        MoveWindow(m_inputEdit->GetHwnd(), 5, HIWORD(lParam) - 25, 
 			LOWORD(lParam) - 10, 20, TRUE);
         return 0; 
 	case WM_DESTROY:
@@ -170,80 +142,21 @@ LRESULT CALLBACK ChatClient::HandleMessage(HWND hWnd, UINT message, WPARAM wPara
 	return 0;
 }
 
-LRESULT CALLBACK BufferWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-	WNDPROC bufferProc;	
-
-	switch (message)
-	{
-	case WM_CHAR:
-		break;
-
-	default:
-		bufferProc = (WNDPROC)GetWindowLong(hWnd, GWL_USERDATA);
-		return CallWindowProc (bufferProc, hWnd, message, wParam, lParam) ;
-	}
-	return 0;
-}
-
-// Window proc for the input edit, subclassed to capture enter strokes.
-LRESULT CALLBACK InputWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-	ChatClient *bwChatClient;
-	Net *net;
-	LPWSTR szBuffer;
-	int inputLen;
-	WNDPROC inputProc;
-
-	switch (message)
-	{
-	case WM_CHAR:
-		if (wParam == 0x0D)
-		{
-			bwChatClient = (ChatClient*)GetWindowLong(hWnd, GWL_USERDATA);
-			net = bwChatClient->GetNet();
-
-			if (!net->IsConnected()) {
-				bwChatClient->AppendToBuffer(TEXT("Not connected."));
-				SendMessage(hWnd, WM_SETTEXT, 0, (LPARAM)NULL);
-				break;
-			}
-
-			inputLen = Edit_GetTextLength(hWnd) + 1;
-			szBuffer = (LPWSTR)malloc(sizeof(WCHAR) * (inputLen + 1));
-			Edit_GetText(hWnd, (LPWSTR)szBuffer, inputLen);
-
-			bwChatClient->ParseCommand(szBuffer);
-
-			free(szBuffer);
-
-			SendMessage(hWnd, WM_SETTEXT, 0, (LPARAM)NULL);
-
-			//MessageBox(NULL, (LPTSTR)szBuffer, TEXT("m_hwndInput"), 0);
-			break;
-		}
-	default:
-		inputProc = (WNDPROC)GetWindowLong(hWnd, GWL_USERDATA);
-		return CallWindowProc (inputProc, hWnd, message, wParam, lParam) ;
-	}
-	return 0;
-}
-
 // Utility method to append data to the end of the buffer edit.
 void ChatClient::AppendToBuffer(LPTSTR szData)
 {
 	int bufferLen;
 
 	// Move caret to the end of the buffer
-	bufferLen = Edit_GetTextLength(m_hwndBuffer);
-	SendMessage(m_hwndBuffer, EM_SETSEL, bufferLen, bufferLen);
+	bufferLen = Edit_GetTextLength(m_bufferEdit->GetHwnd());
+	SendMessage(m_bufferEdit->GetHwnd(), EM_SETSEL, bufferLen, bufferLen);
 
 	// Insert new data
-	SendMessage(m_hwndBuffer, EM_REPLACESEL, 0, (LPARAM)szData);
+	SendMessage(m_bufferEdit->GetHwnd(), EM_REPLACESEL, 0, (LPARAM)szData);
 
 	// Insert line break
 	TCHAR* szNewLine = TEXT("\r\n");
-	SendMessage(m_hwndBuffer, EM_REPLACESEL, 0, (LPARAM)szNewLine);
+	SendMessage(m_bufferEdit->GetHwnd(), EM_REPLACESEL, 0, (LPARAM)szNewLine);
 }
 
 void ChatClient::ParseCommand(LPTSTR szBuffer)
@@ -259,9 +172,74 @@ void ChatClient::ParseCommand(LPTSTR szBuffer)
 
 		_stprintf_s(szDisplayBuffer, 
 			sizeof(szDisplayBuffer)/sizeof(TCHAR),
-			TEXT("<%s> %s"), m_irc->GetChannel(), szBuffer);
+			TEXT("<%s> %s"), m_irc->GetNick(), szBuffer);
 
 		AppendToBuffer(szDisplayBuffer);
 		m_net->Write(szSendBuffer);
 	}
+}
+
+BufferEdit::BufferEdit(HWND hwndParent, HINSTANCE hInstance)
+: SubclassedWindow(L"edit", WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_BORDER | ES_LEFT | ES_MULTILINE | ES_AUTOVSCROLL, 
+				   hwndParent, ID_BUFFER, hInstance)
+{
+
+}
+
+LRESULT CALLBACK BufferEdit::HandleMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	switch (message)
+	{
+	case WM_CHAR:
+		break;
+	default:
+		return CallWindowProc (m_prevWndProc, hWnd, message, wParam, lParam) ;
+	}
+	return 0;
+}
+
+InputEdit::InputEdit(HWND hwndParent, HINSTANCE hInstance, ChatClient *bwChatClient)
+: SubclassedWindow(L"edit", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT, 
+				   hwndParent, ID_INPUT, hInstance)
+{
+	m_bwChatClient = bwChatClient;
+}
+
+// Window proc for the input edit, subclassed to capture enter strokes.
+LRESULT CALLBACK InputEdit::HandleMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	Net *net;
+	LPWSTR szBuffer;
+	int inputLen;
+
+	switch (message)
+	{
+	case WM_CHAR:
+		if (wParam == 0x0D)
+		{
+			net = m_bwChatClient->GetNet();
+
+			if (!net->IsConnected()) {
+				m_bwChatClient->AppendToBuffer(TEXT("Not connected."));
+				SendMessage(hWnd, WM_SETTEXT, 0, (LPARAM)NULL);
+				break;
+			}
+
+			inputLen = Edit_GetTextLength(hWnd) + 1;
+			szBuffer = (LPWSTR)malloc(sizeof(WCHAR) * (inputLen + 1));
+			Edit_GetText(hWnd, (LPWSTR)szBuffer, inputLen);
+
+			m_bwChatClient->ParseCommand(szBuffer);
+
+			free(szBuffer);
+
+			SendMessage(hWnd, WM_SETTEXT, 0, (LPARAM)NULL);
+
+			//MessageBox(NULL, (LPTSTR)szBuffer, TEXT("m_hwndInput"), 0);
+			break;
+		}
+	default:
+		return CallWindowProc (m_prevWndProc, hWnd, message, wParam, lParam) ;
+	}
+	return 0;
 }
