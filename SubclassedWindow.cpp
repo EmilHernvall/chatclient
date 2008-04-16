@@ -8,8 +8,8 @@ SubclassedWindow::SubclassedWindow(LPWSTR szClass, INT nStyle,
 	m_hwnd = CreateWindow(szClass, NULL, nStyle, 0, 0, 0, 0, 
 		hwndParent, (HMENU) nId, hInstance, NULL);
 
-	m_prevWndProc = (WNDPROC)SetWindowLong(m_hwnd, GWL_WNDPROC, (LONG)SubclassedWindow::WndProc);
 	SetWindowLong(m_hwnd, GWL_USERDATA, (LONG)this);
+	m_prevWndProc = (WNDPROC)SetWindowLong(m_hwnd, GWL_WNDPROC, (LONG)SubclassedWindow::WndProc);
 }
 
 LRESULT CALLBACK SubclassedWindow::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)

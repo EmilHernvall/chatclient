@@ -15,13 +15,17 @@ BOOL Net::Initialize()
 	 
 	nErr = WSAStartup(wVersionRequested, &wsaData);
 	if (nErr != 0) {
-		MessageBox(NULL, TEXT("Your system doesn't support the required Winsock Version!"), TEXT("Winsock Error!"), MB_ICONEXCLAMATION);
+
+		MessageBox(NULL, TEXT("Your system doesn't support the required Winsock Version!"), 
+			TEXT("Winsock Error!"), MB_ICONEXCLAMATION);
 		return FALSE;
 	}
 	 
 	if (LOBYTE(wsaData.wVersion) != 2 || HIBYTE(wsaData.wVersion) != 2) {
 		WSACleanup();
-		MessageBox(NULL, TEXT("Your system doesn't support the required Winsock Version!"), TEXT("Winsock Error!"), MB_ICONEXCLAMATION);
+
+		MessageBox(NULL, TEXT("Your system doesn't support the required Winsock Version!"), 
+			TEXT("Winsock Error!"), MB_ICONEXCLAMATION);
 		return FALSE; 
 	}
 

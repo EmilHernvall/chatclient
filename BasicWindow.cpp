@@ -4,8 +4,6 @@
 
 LRESULT BasicWindow::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	CREATESTRUCT *createStruct;
-	BasicWindowClass wcex;
 	BasicWindow *bw;
 
 	bw = (BasicWindow*)GetWindowLong(hWnd, 0);

@@ -14,6 +14,8 @@ public:
 		INT nIcon, INT nSmallIcon, INT nMenu);
 	BOOL Create();
 
+	HWND GetHWND() { return m_hWnd; }
+
 	virtual LRESULT CALLBACK HandleMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) = 0;
 
 protected:

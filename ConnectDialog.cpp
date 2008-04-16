@@ -4,6 +4,7 @@
 #include "Net.h"
 #include "IRC.h"
 
+// Declared in NetThread.cpp
 VOID NetworkThread(PVOID pvoid);
 
 ConnectDialog::ConnectDialog(HINSTANCE hInst, INT nResource, HWND hwndParent, ChatClient *bwChatClient)
@@ -104,7 +105,7 @@ INT_PTR CALLBACK ConnectDialog::HandleMessage(HWND hDlg, UINT message, WPARAM wP
 			szConnectUser = _tcsdup(szUser);
 			szConnectChannel = _tcsdup(szChannel);
 
-			m_bwChatClient->AppendToBuffer(szInfo);
+			m_bwChatClient->AppendToBuffer(0, szInfo);
 
 			m_net->Connect(szConnectHost, wConnectPort);
 			m_irc->SetNick(szConnectNick);
